@@ -1,11 +1,9 @@
+import fastf1
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import fastf1
-import pandas as pd
 
 app = FastAPI()
 
-# This allows your JS frontend to talk to this Python backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,24 +11,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/deg-data/{year}/{gp}/{driver}")
-def get_tyre_data(year: int, gp: str, driver: str):
-    # 1. Load the F1 Session
-    session = fastf1.get_session(year, gp, 'R')
+@app.get("/circuits/{year}")
+def get_circuits(year: int):
+    schedule = fastf1.get_event_schedule(year)
+    gps = schedule[schedule['EventFormat'] != 'testing']['EventName'].tolist()
+    return {"circuits": gps}
+
+@app.get("/drivers/{year}/{gp}/{session_type}")
+def get_drivers(year: int, gp: str, session_type: str):
+    session = fastf1.get_session(year, gp, session_type)
+    session.load(laps=False, telemetry=False, weather=False)
+    
+    driver_list = []
+    for _, row in session.results.iterrows():
+        driver_list.append({
+            "abbr": row['Abbreviation'],
+            "team": row['TeamName'],
+            "color": f"#{row['TeamColor']}" if row['TeamColor'] else "#888888"
+        })
+    return {"drivers": driver_list}
+
+@app.get("/deg-data/{year}/{gp}/{session_type}/{driver}")
+def get_tyre_data(year: int, gp: str, session_type: str, driver: str):
+    session = fastf1.get_session(year, gp, session_type)
     session.load(laps=True, telemetry=False, weather=False)
     
-    # 2. Get laps for the specific driver
+    # We use pick_accurate to ensure we have valid lap times
     driver_laps = session.laps.pick_driver(driver).pick_accurate()
     
-    # 3. Clean the data for the frontend
-    # We want LapNumber, TyreLife (age), and LapTime in seconds
     results = []
     for _, lap in driver_laps.iterrows():
+        # IMPORTANT: Force sessionPart to a string to ensure frontend can read it
+        s_part = str(lap['SessionPart']) if 'SessionPart' in lap else 'R'
+        
         results.append({
             "lap": int(lap['LapNumber']),
-            "tyreAge": int(lap['TyreLife']),
-            "lapTime": lap['LapTime'].total_seconds(),
-            "compound": lap['Compound']
+            "lapTime": float(lap['LapTime'].total_seconds()),
+            "compound": str(lap['Compound']),
+            "sessionPart": s_part
         })
-        
-    return {"driver": driver, "data": results}
+    return {"data": results}

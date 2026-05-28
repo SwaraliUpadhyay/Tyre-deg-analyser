@@ -179,8 +179,8 @@ function App() {
   const [showTraffic, setShowTraffic] = useState(false);
   const [showDRS, setShowDRS] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
-  const compoundColors = { SOFT: '#ff3333', MEDIUM: '#ffff00', HARD: '#ffffff', INTERMEDIATE: '#43b02a', WET: '#0067ad' };
+const API_URL = (process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const compoundColors = { SOFT: '#ff3333', MEDIUM: '#ffff00', HARD: '#ffffff', INTERMEDIATE: '#43b02a', WET: '#0067ad' };
 
   // --- DATA FETCHING ---
 

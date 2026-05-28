@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import numpy as np
 from scipy import stats
+import os
 
+cache_dir = "/tmp/fastf1_cache"
+os.makedirs(cache_dir, exist_ok=True)
+fastf1.Cache.enable_cache(cache_dir)
 app = FastAPI()
 
 app.add_middleware(
